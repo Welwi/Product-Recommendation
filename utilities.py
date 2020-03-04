@@ -106,10 +106,27 @@ def DfLowMemoryTest(test_filename):
     
 def CleanData(df_data):
     
+    # ind_empleado - 27734. Employee index: A active, B ex employed, F filial, N not employee, P pasive. 
+    #I am noticing that there is a value that is not in the description so I believe it is a typo. 
+    #I tried looking more into the data but in the end I decided to drop since it is just one person.
     df = df_data[df_data['ind_empleado'] != 'S']
+    
+    # pais_residencia - 27734. One aspect that I found interesting is that customers with pais_residenciamissing had all other features missing. 
+    #For now I am going to drop all of them
     df.dropna(subset=['pais_residencia'], inplace=True)
+    
+    # Now there are 70 missing values for gender. The value distribution doesn't seem very different. I am going to replace them with the mode.
     df['sexo'].fillna(df['sexo'].mode()[0], inplace=True)
+    
+    # ult_fec_cli_1t has a lot of missing values. This represents the last day the the customer was the primary costumer.
+       # Looking at the indrel_1mes column, it shows that most of the customers at the beginning of the month were the primary costumers. So 
+    # I am assuming that the customers with missing last date as the primary costumers are still the primary costumers. So I am going to impute 
+    # this with 'primary'
     df.loc[df['ult_fec_cli_1t'].isnull(), 'ult_fec_cli_1t'] = 'PRIMARY'
+    
+    # Customer type at the beginning of the month ,1 (First/Primary customer), 2 (co-owner ),P (Potential),3 (former primary), 4(former co-owner).
+    # some values that were supposed to be 1 are 1.0 and for the other categories as well. So I am going to use 1,2,3,4 like in the description
+    # This has been suggested by @StephenSmith
     map_dict = {'1.0' : '1',
                 '1' : '1',
                 '2' : '2',
@@ -123,6 +140,12 @@ def CleanData(df_data):
     df.indrel_1mes = df.indrel_1mes.apply(lambda x: map_dict.get(x,x))
     df.indrel_1mes = df.indrel_1mes.astype('category')
 
+    # Customer relation type at the beginning of the month, A (active), I (inactive), P (former customer),R (Potential)
+    # There are some described as N that doesn't fit into the column description.
+    # Taking a closer look at these 4 rows and comparing them with the ind_actividad: df[df['tiprel_1mes'] == 'N'].iloc[:,8:24]
+    # The ones that had ind_actividad = 1 were imputed as active and the ones that had 0 were imputed as I
+    # For the nan values, there is another column named 'ind_actividad_cliente' that is 1 for active costumers and 0 for inactive. I am 
+    # going to use this to impute the nan values for tiprel_1mes
     df.loc[df['tiprel_1mes'].isnull(), 'tiprel_1mes'] = df['ind_actividad_cliente']
 
     map_tip = {1 : 'A',
@@ -135,21 +158,33 @@ def CleanData(df_data):
     df.loc[11247349, 'tiprel_1mes'] = 'I'
     df.tiprel_1mes = df.tiprel_1mes.astype('category')
     
+    # conyuemp Spouse index. 1 if the customer is spouse of an employee
+    # I am assuming that most customers are not spouses and I am going to impute these with the mode
+    # Now there are 70 missing values for gender. The value distribution doesn't seem very different. I am going to replace them with the mode.
     df['conyuemp'].fillna(df['conyuemp'].mode()[0], inplace=True)
     df.conyuemp = df.conyuemp.astype('category')
     
+    
+    # canal_entrada. Channel used by the customer to join
+    # I am going to fill the missing values with the mode
     df['canal_entrada'].fillna(df['canal_entrada'].mode()[0], inplace=True)
     
+    # tipodom. Addres type. 1, primary address. It is only 1 value missing so I am just going to replace it with the mode
     df['tipodom'].fillna(df['tipodom'].mode()[0], inplace=True)
     
-
+    # cod_prov. Province code (customer's address)
+    # nomprov. Province name. 
+    # These two have the same number of missing values. I am going to replace these with unknow
+    # THESE IS SUGGESTED BY ALAN PRYOR
     for c in ['cod_prov', 'nomprov']:
         df.loc[df[c].isnull(), c ] = 'UNKOWN'
-        
+    
+    # Renta. Gross income of the household. I am going to replace the missing values with the mean salary per providence. 
     salaries = dict(df.groupby('nomprov')['renta'].mean().round(0))
     df.loc[df['renta'].isnull(), 'renta'] = df['nomprov']
     df.renta = df.renta.apply(lambda x: salaries.get(x,x))
     
+    # Segmento. segmentation: 01 - VIP, 02 - Individuals 03 - college graduated
     for c in ['segmento']:
         df.loc[df[c].isnull(), c ] = 'UNKOWN'
         
@@ -159,57 +194,6 @@ def CleanData(df_data):
             
     return df
 
-
-def CleanTestData(test):
-    
-    df = test[test['ind_empleado'] != 'S']
-    df.dropna(subset=['pais_residencia'], inplace=True)
-    df['sexo'].fillna(df['sexo'].mode()[0], inplace=True)
-    df.loc[df['ult_fec_cli_1t'].isnull(), 'ult_fec_cli_1t'] = 'PRIMARY'
-    map_dict = {'1.0' : '1',
-                '1' : '1',
-                '2' : '2',
-                '2.0' : '2',
-                '3' : '3',
-                '3.0' : '3', 
-                '4' : '4',
-                '4.0' : '4'}
-
-    df.indrel_1mes.fillna('P', inplace=True)
-    df.indrel_1mes = df.indrel_1mes.apply(lambda x: map_dict.get(x,x))
-    df.indrel_1mes = df.indrel_1mes.astype('category')
-
-    df.loc[df['tiprel_1mes'].isnull(), 'tiprel_1mes'] = df['ind_actividad_cliente']
-
-    map_tip = {1 : 'A',
-               0 : 'I'}        
-
-    df.tiprel_1mes = df.tiprel_1mes.apply(lambda x: map_tip.get(x,x))
-    df['tiprel_1mes'].fillna(df['tiprel_1mes'].mode()[0], inplace=True)
-    
-    df.tiprel_1mes = df.tiprel_1mes.astype('category')
-    
-    df['conyuemp'].fillna(df['conyuemp'].mode()[0], inplace=True)
-    df.conyuemp = df.conyuemp.astype('category')
-    
-    df['canal_entrada'].fillna(df['canal_entrada'].mode()[0], inplace=True)
-    
-    df['tipodom'].fillna(df['tipodom'].mode()[0], inplace=True)
-    
-
-    for c in ['cod_prov', 'nomprov']:
-        df.loc[df[c].isnull(), c ] = 'UNKOWN'
-        
-    salaries = dict(df.groupby('nomprov')['renta'].mean().round(0))
-    df.loc[df['renta'].isnull(), 'renta'] = df['nomprov']
-    df.renta = df.renta.apply(lambda x: salaries.get(x,x))
-    
-    for c in ['segmento']:
-        df.loc[df[c].isnull(), c ] = 'UNKOWN'
-        
-    df.loc[df['antiguedad'] == '-999999', 'antiguedad'] = 'UNKNOWN'
-            
-    return df
 
     
 def SampleLowMemory(filename):
