@@ -28,7 +28,9 @@ My current model can be founf on FinalModel.
 
 
 ### Next Steps:
-Rank the products for each customer by their probabilities
+Rank the products for each customer by their probabilities.
+
 Suggest the top 7 products with highest probabilities that the customer does not have.
+
 Seeing how much better neural networks would be for solving this problem.
 
