@@ -4,7 +4,7 @@ By: Edna Fernandes
 ## Project Goals/Overview
 In 2016, Santander Bank was concerned with the fact that some customers got a lot of products recommended while others rarely got any recommendations. Therefore, Santander wanted to improve their product recommendation system, and only recommend the top 7 products that the customer would most likely purchase. This would help increase the bank's profits, while at the same time improving the customer's experience.
 
-The final presentation can be found in the file 'Final_Presentation.pdf'.
+The final presentation can be found in the file 'Santander_Bank_Product_Recommendation'.
 
 ## README Summary
 In this README I will present my data cleaning process, some insights drawn form my data analysis and the modeling results.
